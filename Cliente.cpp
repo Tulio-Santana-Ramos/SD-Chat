@@ -5,6 +5,7 @@
 #include <bits/stdc++.h>
 
 #define LIMITE_MENSAGEM 4097    // Definição do limite do tamanho da mensagem
+#define LIMITE_ARQUIVO 16384    // Definição do limite do tamanho do arquivo
 
 using namespace std;
 
@@ -14,6 +15,12 @@ char nickname[50];  // Nickname do usuário
 sockaddr_in endereco_servidor;
 char mensagem_cliente[LIMITE_MENSAGEM];
 char mensagem_servidor[LIMITE_MENSAGEM];
+
+// Função auxiliar para converter char* para string
+string convert_char_to_string(char str[]){
+    string new_string(str);
+    return new_string;
+}
 
 // Função para conexão do servidor
 bool conectar_servidor() {
@@ -42,6 +49,29 @@ bool mandar_mensagem_servidor(string mensagem_total) {
             j = 0;
         }
     }
+    // Sinaliza final do envio:
+    mensagem_cliente[0] = '\0';
+    if (send(fd_cliente, mensagem_cliente, 1, MSG_NOSIGNAL) == -1)
+        return false;
+    return true;
+}
+
+bool mandar_arquivo_servidor(FILE *fp) {
+    // size_t readBytes;
+    // while ((readBytes = fread(mensagem_cliente , 1, LIMITE_MENSAGEM, fp) > 0))
+    // while ((readBytes = fscanf(fp, "%s", mensagem_cliente) > 0))
+    while(fgets(mensagem_cliente, LIMITE_MENSAGEM, fp) != NULL)
+    {
+        // cout << "RB=" << readBytes << "\n";
+        cout << "MC=" << mensagem_cliente << "\n";
+        if (send(fd_cliente, mensagem_cliente, strlen(mensagem_cliente), 0) == -1)
+        {
+            cout << "Erro ao transmitir arquivo!\n";
+            break;
+        }
+        bzero(mensagem_cliente, LIMITE_MENSAGEM);
+    }
+    cout << "Saaí do loopppp\n";
     // Sinaliza final do envio:
     mensagem_cliente[0] = '\0';
     if (send(fd_cliente, mensagem_cliente, 1, MSG_NOSIGNAL) == -1)
@@ -111,6 +141,19 @@ void *send_thread(void *args){
         if (entrada == "/quit") {
             mandar_mensagem_servidor(entrada);
             return NULL;
+        }
+        if (entrada == "/file") {
+            char nomeArquivo[15];
+            int conteudo[LIMITE_ARQUIVO];
+            cout << "Digite o nome do arquivo: ";
+            cin >> nomeArquivo;
+            FILE *arquivo = fopen(nomeArquivo, "rb");
+            if (arquivo) {
+                mandar_mensagem_servidor("/file " + convert_char_to_string(nomeArquivo));
+                mandar_arquivo_servidor(arquivo);
+            } else {
+                cout << "Arquivo inválido!\n";
+            }
         }
         if (!mandar_mensagem_servidor(entrada))
             cerr << "Erro ao enviar a mensagem!\n";
