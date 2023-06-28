@@ -16,10 +16,30 @@ sockaddr_in endereco_servidor;
 char mensagem_cliente[LIMITE_MENSAGEM];
 char mensagem_servidor[LIMITE_MENSAGEM];
 
+// Função auxiliar para converter string para char*
+char *convert_string_to_char(string str) {
+    char *new_string = (char *) calloc(str.length() + 1, 1);
+    strcpy(new_string, str.c_str());
+    return new_string;
+}
+
 // Função auxiliar para converter char* para string
-string convert_char_to_string(char str[]){
+string convert_char_to_string(char str[]) {
     string new_string(str);
     return new_string;
+}
+
+// Função auxiliar para divisão de strings
+string split(char str[], char delim) {
+    int i = 0, start = 0, end = int(strlen(str)) - 1;
+
+    while(i++ < int(strlen(str))){
+        if(str[i] == delim)
+            start = i + 1;
+    }
+    string new_str = "";
+    new_str.append(str, start, end - start + 1);
+    return new_str;
 }
 
 // Função para conexão do servidor
@@ -44,38 +64,23 @@ bool mandar_mensagem_servidor(string mensagem_total) {
         if (i == mensagem_total.size() - 1 || j == LIMITE_MENSAGEM - 1) {
             mensagem_cliente[j] = '\0';
             // Envia um bloco da mensagem ao servidor:
-            if (send(fd_cliente, mensagem_cliente, strlen(mensagem_cliente) + 1, MSG_NOSIGNAL) == -1)
+            if (send(fd_cliente, mensagem_cliente, LIMITE_MENSAGEM, MSG_NOSIGNAL) == -1)
                 return false;
             j = 0;
         }
     }
     // Sinaliza final do envio:
-    mensagem_cliente[0] = '\0';
-    if (send(fd_cliente, mensagem_cliente, 1, MSG_NOSIGNAL) == -1)
+    bzero(mensagem_cliente, LIMITE_MENSAGEM);
+    if (send(fd_cliente, mensagem_cliente, LIMITE_MENSAGEM, MSG_NOSIGNAL) == -1)
         return false;
     return true;
 }
 
+// Função auxiliar para envio de arquivos binários:
 bool mandar_arquivo_servidor(FILE *fp) {
-    // size_t readBytes;
-    // while ((readBytes = fread(mensagem_cliente , 1, LIMITE_MENSAGEM, fp) > 0))
-    // while ((readBytes = fscanf(fp, "%s", mensagem_cliente) > 0))
-    while(fgets(mensagem_cliente, LIMITE_MENSAGEM, fp) != NULL)
-    {
-        // cout << "RB=" << readBytes << "\n";
-        cout << "MC=" << mensagem_cliente << "\n";
-        if (send(fd_cliente, mensagem_cliente, strlen(mensagem_cliente), 0) == -1)
-        {
-            cout << "Erro ao transmitir arquivo!\n";
-            break;
-        }
-        bzero(mensagem_cliente, LIMITE_MENSAGEM);
-    }
-    cout << "Saaí do loopppp\n";
-    // Sinaliza final do envio:
-    mensagem_cliente[0] = '\0';
-    if (send(fd_cliente, mensagem_cliente, 1, MSG_NOSIGNAL) == -1)
-        return false;
+    /*
+        TODO: ler arquivo e definir forma de envio (sinalização de bytes transmitidos)
+    */
     return true;
 }
 
@@ -136,26 +141,30 @@ void *recv_thread(void *args){
 // Função privada com a lógica da thread de envio de mensagens
 void *send_thread(void *args){
     while (true) {
-        // cout << "Digite sua mensagem ou comando: \n";
         getline(cin, entrada);
         if (entrada == "/quit") {
             mandar_mensagem_servidor(entrada);
             return NULL;
         }
-        if (entrada == "/file") {
-            char nomeArquivo[15];
-            int conteudo[LIMITE_ARQUIVO];
-            cout << "Digite o nome do arquivo: ";
-            cin >> nomeArquivo;
-            FILE *arquivo = fopen(nomeArquivo, "rb");
+        if (entrada.find("/file") != string::npos) {
+            string parametro = split(entrada, ' ');
+            char *nomeArquivo = convert_string_to_char(parametro);
+            FILE *arquivo = fopen(nomeArquivo, "r");
             if (arquivo) {
-                mandar_mensagem_servidor("/file " + convert_char_to_string(nomeArquivo));
-                mandar_arquivo_servidor(arquivo);
+                if (!mandar_mensagem_servidor(entrada))
+                    cerr << "Envio de arquivo não sinalizado ao servidor!\n";
+                bzero(mensagem_cliente, LIMITE_MENSAGEM);
+                while(fgets(mensagem_cliente, LIMITE_MENSAGEM, arquivo) != NULL) {
+                    if (!mandar_mensagem_servidor(convert_char_to_string(mensagem_cliente)))
+                        cerr << "Erro ao enviar arquivo!\n";
+                    bzero(mensagem_cliente, LIMITE_MENSAGEM);
+                }
+                fclose(arquivo);
             } else {
                 cout << "Arquivo inválido!\n";
             }
         }
-        if (!mandar_mensagem_servidor(entrada))
+        else if (!mandar_mensagem_servidor(entrada))
             cerr << "Erro ao enviar a mensagem!\n";
     }
     return NULL;

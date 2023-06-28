@@ -203,7 +203,6 @@ void *handle_client(void *arg){
     while(!leave_flag){
         // Possível recepção de mensagem ou comando
         int receive = recv(cliente->fd_cliente, mensagem, LIMITE_MENSAGEM, 0);
-        cout << "MENSAGEM=" << mensagem << "\n";
 
         // Variável auxiliar para casos de remoção de usuário (comando kick)
         int removed_fd = -1;
@@ -273,19 +272,18 @@ void *handle_client(void *arg){
                 }
             }
             else if (aux.find("/file") != string::npos) {
+                receive = recv(cliente->fd_cliente, mensagem, LIMITE_MENSAGEM, 0);  // buffer "vazio" representando o fim de "/file <nome_arquivo>"
                 char *nomeArquivo = convert_string_to_char(cliente->nickname + parametro);
-                // FILE *arquivo = fopen(nomeArquivo, "wb"); 
                 FILE *arquivo = fopen(nomeArquivo, "w"); 
-                // while (receive && strlen(mensagem)) {
-                while (receive > 1) {
-                    if (strcmp(mensagem, "\0") == 0) break;
+                while (true) {
+                    bzero(mensagem, LIMITE_MENSAGEM);
                     receive = recv(cliente->fd_cliente, mensagem, LIMITE_MENSAGEM, 0);
-                    cout << "recebi: " << mensagem << "\n";
+                    if (strlen(mensagem) == 0) break;
                     // fwrite(mensagem, 1, receive, arquivo);
                     fprintf(arquivo, "%s", mensagem);
                 }
-                cout << "Saí do loop servidor\n";
                 fclose(arquivo);
+                cout << cliente->nickname << " enviou um arquivo (verifique " << nomeArquivo << ")\n";
              }
             // Caso de envio de mensagens normais
             else if (strlen(mensagem) > 0){
