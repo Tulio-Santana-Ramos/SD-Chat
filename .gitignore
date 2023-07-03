@@ -1,2 +1,6 @@
 ClientSide
 ServerSide
+*.txt
+*.png
+*.o
+.vscode
