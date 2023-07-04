@@ -49,4 +49,4 @@ Para excluir os arquivos executáveis gerados na etapa de compilação, basta ut
 
 ### Execução em Vídeo
 
-Para demonstração do código, pode-se acessar este [link](COLOCAR O LINK AQUI) em que um dos integrantes do grupo apresenta as diferentes funcionalidades de ambas as partes desta aplicação e comenta sobre o o desenvolvimento e execução do código.
+Para demonstração do código, pode-se acessar este [link](https://drive.google.com/drive/folders/1Ol6qPHAxd4zUlxL9qCATDD1S3T1BfkaD) em que um dos integrantes do grupo apresenta as diferentes funcionalidades de ambas as partes desta aplicação e comenta sobre o o desenvolvimento e execução do código.
